@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import {
   StyleSheet,
@@ -9,20 +9,66 @@ import {
   TouchableOpacity,
   Modal,
   TouchableHighlight,
-  TextInput
+  TextInput,
+  ScrollView,
 } from 'react-native';
 
 import NumericInput from 'react-native-numeric-input'
 
-export const TaskPage = () => {
+import Storage from '../scripts/storage'
+import {Notifications} from 'react-native-notifications'
 
-  const [page, setPage] = useState('diaria')
+export const TaskPage = () => {
+  
+  const [page, setPage] = useState('one shot')
   const [oneshotmodalvisible, setoneshotmodalvisible] = useState(false)
   const [diariomodalvisible, setdiariomodalvisible] = useState(false)
   const [diariolist, setdiariolist] = useState([])
   const [oneshotlist, setoneshotlist] = useState([])
   const [repsdiariomodal, setrepsdiariomodal] = useState(1)
   const [textinput, settextinput] = useState('')
+  
+  var listItem = (item) => {
+    return (
+      <View style={styles.itemcontainer} key={item.key.toString()}>
+        <View style={styles.itemtext}>
+          <Text style={styles.item}>
+            {item.name}
+            {(item.frequency ? ' => ' + item.frequency : '')}
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.deletebutton} onPress={
+          async () => {
+            if (page == 'diaria') {
+              setdiariolist(await Storage.deleteDiarioList(item.key))
+            } else {
+              setoneshotlist(await Storage.deleteOneshotList(item.key))
+            }
+          }
+        }>
+          <Text>X</Text>
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
+  useEffect(() => {
+    Notifications.registerRemoteNotifications();
+    Notifications.postLocalNotification({
+      body: 'Local notification!',
+      title: 'Local Notification Title',
+      sound: 'chime.aiff',
+      category: 'SOME_CATEGORY',
+      link: 'localNotificationLink',
+      fireDate: new Date()
+    }, 1);
+    (async () => {
+      let diariolist = await Storage.fetchDiarioList()
+      let oneshotlist = await Storage.fetchOneshotList()
+      setdiariolist(diariolist)
+      setoneshotlist(oneshotlist)
+    })()
+  }, [])
 
   var getCurrentList = () => {
     if (page === 'diaria') {
@@ -34,7 +80,96 @@ export const TaskPage = () => {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.buttons}>
+
+      <View>
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={diariomodalvisible}
+          onRequestClose={() => {
+            Alert.alert("Modal has been closed.");
+          }}
+        >
+          <View style={styles.centeredView}>
+            <View style={styles.modalView}>
+              <TextInput placeholder="Tarefa..." style={styles.textinput}
+                onChangeText={(value) => settextinput(value)} />
+              <Text>Número de vezes ao dia</Text>
+              <NumericInput
+                value={repsdiariomodal}
+                onChange={value => setrepsdiariomodal(value)}
+                minValue={1}
+                onLimitReached={(isMax, msg) => console.log(isMax, msg)}
+                rounded />
+
+              <TouchableHighlight
+                style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
+                onPress={async () => {
+                  let diariolist = await Storage.addDiarioList(
+                    {
+                      name: textinput,
+                      frequency: repsdiariomodal
+                    })
+                  setrepsdiariomodal(1)
+                  settextinput('')
+                  setdiariomodalvisible(!diariomodalvisible)
+                  setdiariolist(diariolist)
+                }}
+              >
+                <Text style={styles.textStyle}>Adicionar</Text>
+              </TouchableHighlight>
+
+              <TouchableHighlight
+                style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
+                onPress={() => {
+                  setdiariomodalvisible(!diariomodalvisible);
+                }}
+              >
+                <Text style={styles.textStyle}>Cancelar</Text>
+              </TouchableHighlight>
+            </View>
+          </View>
+        </Modal>
+
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={oneshotmodalvisible}
+          onRequestClose={() => {
+            Alert.alert("Modal has been closed.");
+          }}
+        >
+          <View style={styles.centeredView}>
+            <View style={styles.modalView}>
+              <TextInput placeholder="Tarefa..." style={styles.textinput}
+                onChangeText={(value) => settextinput(value)} />
+
+              <TouchableHighlight
+                style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
+                onPress={async () => {
+                  let oneshotlist = await Storage.addOneshotList({ name: textinput })
+                  settextinput('')
+                  setoneshotmodalvisible(!oneshotmodalvisible)
+                  setoneshotlist(oneshotlist)
+                }}
+              >
+                <Text style={styles.textStyle}>Adicionar</Text>
+              </TouchableHighlight>
+
+              <TouchableHighlight
+                style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
+                onPress={() => {
+                  setoneshotmodalvisible(!oneshotmodalvisible);
+                }}
+              >
+                <Text style={styles.textStyle}>Cancelar</Text>
+              </TouchableHighlight>
+            </View>
+          </View>
+        </Modal>
+      </View>
+
+      <View>
         <View style={styles.button}>
           <Button title="Diaria"
             onPress={
@@ -56,144 +191,61 @@ export const TaskPage = () => {
           />
         </View>
       </View>
+
       <View style={styles.tasks}>
+      
         <View style={styles.buttonbox}>
-          <TouchableOpacity style={styles.buttonwrapper} onPress={() => setPage('diaria')}>
+          <TouchableOpacity style={styles.buttonwrapper} onPress={() =>
+            setPage('diaria')}>
             <View style={[ styles.buttonview, { borderRightWidth: 1 }]}>
               <Text>Diaria</Text>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.buttonwrapper} onPress={() => setPage('one shot')}>
+          <TouchableOpacity style={styles.buttonwrapper} onPress={() =>
+            setPage('one shot')}>
             <View style={[ styles.buttonview, { borderLeftWidth: 1 } ]}>
               <Text>One Shot</Text>
             </View>
           </TouchableOpacity>
         </View>
-        <View>
-          <FlatList
-            data={getCurrentList()}
-            renderItem={ function ({ item }) {
-              return (
-                <TouchableOpacity style={styles.itemcontainer} onPress={
-                  () => {
-                    if (page == 'diaria') {
-                      setdiariolist(diariolist.filter((obj) => obj.key != item.key))
-                    } else {
-                      setoneshotlist(oneshotlist.filter((obj) => obj.key != item.key))
-                    }
-                  }
-                }>
-                  <Text style={styles.item}>{item.str}</Text>
-                </TouchableOpacity>
-              )
-            }}/>
-        </View>
+      
+        <ScrollView style={{height: 430}}>
+          {
+            (() => getCurrentList()
+              .map((l, i) => listItem(l))
+            )()
+          }
+        </ScrollView>
       </View>
-
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={diariomodalvisible}
-        onRequestClose={() => {
-          Alert.alert("Modal has been closed.");
-        }}
-      >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <TextInput placeholder="Tarefa..." style={styles.textinput} 
-              onChangeText={(value) => settextinput(value)}/>
-            <Text>Número de vezes ao dia</Text>
-            <NumericInput
-              value={repsdiariomodal}
-              onChange={value => setrepsdiariomodal(value)}
-              minValue={1}
-              onLimitReached={(isMax, msg) => console.log(isMax, msg)}
-              rounded />
-
-            <TouchableHighlight
-              style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
-              onPress={() => {
-                let obj = {
-                  key: Math.random().toString(),
-                  str: textinput,
-                  rep: repsdiariomodal
-                }
-                console.log(obj)
-                console.log([...diariolist, obj])
-                setrepsdiariomodal(1)
-                settextinput('')
-                setdiariolist([...diariolist, obj])
-                setdiariomodalvisible(!diariomodalvisible);
-              }}
-            >
-              <Text style={styles.textStyle}>Adicionar</Text>
-            </TouchableHighlight>
-
-            <TouchableHighlight
-              style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
-              onPress={() => {
-                setdiariomodalvisible(!diariomodalvisible);
-              }}
-            >
-              <Text style={styles.textStyle}>Cancelar</Text>
-            </TouchableHighlight>
-          </View>
-        </View>
-      </Modal>
-
-
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={oneshotmodalvisible}
-        onRequestClose={() => {
-          Alert.alert("Modal has been closed.");
-        }}
-      >
-        <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <TextInput placeholder="Tarefa..." style={styles.textinput}
-              onChangeText={(value) => settextinput(value)} />
-
-            <TouchableHighlight
-              style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
-              onPress={() => {
-                let obj = {
-                  key: Math.random().toString(),
-                  str: textinput
-                }
-                settextinput('')
-                setoneshotlist([...oneshotlist, obj])
-                setoneshotmodalvisible(!oneshotmodalvisible);
-              }}
-            >
-              <Text style={styles.textStyle}>Adicionar</Text>
-            </TouchableHighlight>
-
-            <TouchableHighlight
-              style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
-              onPress={() => {
-                setoneshotmodalvisible(!oneshotmodalvisible);
-              }}
-            >
-              <Text style={styles.textStyle}>Cancelar</Text>
-            </TouchableHighlight>
-          </View>
-        </View>
-      </Modal>
+        
     </View>
   )
 };
 
 const styles = StyleSheet.create({
-  itemcontainer: {
+  deletebutton: {
+    flex: 1,
+    backgroundColor: 'red',
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 6,
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderWidth: 1,
-    borderColor: '#dddddd',
-    backgroundColor: '#f5f5f5'
+    borderColor: '#b1b1b1',
+    borderLeftWidth: 0
+  },
+  itemtext: {
+    flex: 5,
+    backgroundColor: '#f5f5f5',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: '#b1b1b1',
+    borderRightWidth: 0
+  },
+  itemcontainer: {
+    flexDirection: 'row',
+    marginTop: 6,
   },
   textinput: {
     borderWidth: 1,
@@ -204,16 +256,13 @@ const styles = StyleSheet.create({
     borderRadius: 10
   },
   screen: {
-    padding: 10
-  },
-  buttons: {
-    paddingHorizontal: 10
+    padding: 7
   },
   button: {
     margin: 4
   },
   tasks: {
-    padding: 10
+    padding: 6
   },
   task: {
     flexDirection: 'row',

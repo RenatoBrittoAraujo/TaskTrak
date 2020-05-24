@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "347257797986",
+    "firebase_url": "https://tasktrak-f91ab.firebaseio.com",
+    "project_id": "tasktrak-f91ab",
+    "storage_bucket": "tasktrak-f91ab.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:347257797986:android:3290603832c9562d72803b",
+        "android_client_info": {
+          "package_name": "com.tasktrak"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "347257797986-v0inagl0rsg6dbc62ah29427oqnfdsui.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkhy0_u9IxBME3p1QCEWJt6d3k1vUfF1E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "347257797986-v0inagl0rsg6dbc62ah29427oqnfdsui.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

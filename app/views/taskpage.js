@@ -90,7 +90,7 @@ export const TaskPage = () => {
     func()
     const interval = setInterval(() => {
       func()
-    }, 3000)
+    }, 1000)
   }, [])
 
   const getPendingTasks = (list) => {

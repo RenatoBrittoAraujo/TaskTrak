@@ -22,7 +22,7 @@ class NotificationService {
     pending = pending.filter((el, i) => 
       i <= maxNotificationElements)
     
-    if (pending.length < 0) {
+    if (pending.length <= 0) {
       BackgroundFetch.finish(taskId)
       return
     }
@@ -71,7 +71,6 @@ class NotificationService {
   }
   
   start () {
-    Notifications.registerRemoteNotifications()
     this._notificationSetup()
   }
 }

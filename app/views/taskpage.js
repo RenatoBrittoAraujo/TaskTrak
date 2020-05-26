@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 
 import {
   StyleSheet,
-  FlatList,
   View,
   Text,
   Button,
@@ -13,69 +12,94 @@ import {
   ScrollView,
 } from 'react-native';
 
+import Icon from 'react-native-vector-icons/MaterialIcons'
+Icon.loadFont()
+import RNPickerSelect from 'react-native-picker-select'
 import NumericInput from 'react-native-numeric-input'
 
 import Storage from '../scripts/storage'
-import {Notifications} from 'react-native-notifications'
+
+const dayInMilisseconds = 24 * 60 * 60 * 1000
+const weekInMilisseconds = dayInMilisseconds * 7
+const monthInMilisseconds = Math.round(weekInMilisseconds * 4.28)
+const yearInMilisseconds = monthInMilisseconds * 12
+
+// Storage.WipeData()
 
 export const TaskPage = () => {
   
-  const [page, setPage] = useState('one shot')
+  const [page, setPage] = useState('freqlist')
   const [oneshotmodalvisible, setoneshotmodalvisible] = useState(false)
-  const [diariomodalvisible, setdiariomodalvisible] = useState(false)
-  const [diariolist, setdiariolist] = useState([])
+  const [freqmodalvisible, setfreqmodalvisible] = useState(false)
+  const [freqlist, setfreqlist] = useState([])
   const [oneshotlist, setoneshotlist] = useState([])
-  const [repsdiariomodal, setrepsdiariomodal] = useState(1)
+  const [frequencyreps, setfrequencyreps] = useState(1)
   const [textinput, settextinput] = useState('')
+  const [frequencyperiod, setfrequencyperiod] = useState(dayInMilisseconds)
   
+  var getCurrentList = () => {
+    return page == 'freqlist' ?
+      freqlist : oneshotlist  
+  }
+  
+  var getCurrentListSetter = () => {
+    return page == 'freqlist' ?
+      setfreqlist : setoneshotlist
+  }
+
   var listItem = (item) => {
     return (
       <View style={styles.itemcontainer} key={item.key.toString()}>
+        <TouchableOpacity style={styles.markdone} onPress={
+          async () => {
+            getCurrentListSetter()(
+              await Storage.markDoneList(page, item.key))
+          }
+        }>
+          <Icon name="check" size={25} color="#4F4" />
+        </TouchableOpacity>
         <View style={styles.itemtext}>
           <Text style={styles.item}>
             {item.name}
-            {(item.frequency ? ' => ' + item.frequency : '')}
+            {
+              ': ' + (item.extraInformation().length > 0 ?
+                item.extraInformation() :
+                !item.isDone() ? 'pending' : 'done')
+            }
           </Text>
         </View>
-        <TouchableOpacity style={styles.deletebutton} onPress={
+        <TouchableOpacity style={styles.markdelete} onPress={
           async () => {
-            if (page == 'diaria') {
-              setdiariolist(await Storage.deleteDiarioList(item.key))
-            } else {
-              setoneshotlist(await Storage.deleteOneshotList(item.key))
-            }
+            getCurrentListSetter()(
+              await Storage.deleteList(page, item.key))
           }
         }>
-          <Text>X</Text>
+          <Icon name="close" size={25} color="#F44" />
         </TouchableOpacity>
       </View>
     )
   }
 
   useEffect(() => {
-    Notifications.registerRemoteNotifications();
-    Notifications.postLocalNotification({
-      body: 'Local notification!',
-      title: 'Local Notification Title',
-      sound: 'chime.aiff',
-      category: 'SOME_CATEGORY',
-      link: 'localNotificationLink',
-      fireDate: new Date()
-    }, 1);
-    (async () => {
-      let diariolist = await Storage.fetchDiarioList()
-      let oneshotlist = await Storage.fetchOneshotList()
-      setdiariolist(diariolist)
+    const func = (async () => {
+      let freqlist = await Storage.fetchList('freqlist')
+      setfreqlist(freqlist)
+      let oneshotlist = await Storage.fetchList('oneshotlist')
       setoneshotlist(oneshotlist)
-    })()
+    })
+    func()
+    const interval = setInterval(() => {
+      func()
+    }, 3000)
   }, [])
 
-  var getCurrentList = () => {
-    if (page === 'diaria') {
-      return diariolist
-    } else {
-      return oneshotlist
+  const getPendingTasks = (list) => {
+    let pending = 0
+    for (let item of list) {
+      if (!item.isDone())
+       pending++
     }
+    return pending
   }
 
   return (
@@ -85,47 +109,54 @@ export const TaskPage = () => {
         <Modal
           animationType="fade"
           transparent={true}
-          visible={diariomodalvisible}
-          onRequestClose={() => {
-            Alert.alert("Modal has been closed.");
-          }}
+          visible={freqmodalvisible}
         >
           <View style={styles.centeredView}>
             <View style={styles.modalView}>
-              <TextInput placeholder="Tarefa..." style={styles.textinput}
+              <TextInput placeholder="Task..." style={styles.textinput}
                 onChangeText={(value) => settextinput(value)} />
-              <Text>Número de vezes ao dia</Text>
+              <RNPickerSelect
+                placeholder={{ label: 'Daily', value: dayInMilisseconds }}
+                onValueChange={(value) => setfrequencyperiod(value)}
+                items={[
+                  { label: 'Hourly', value: Math.round(dayInMilisseconds / 24)},
+                  { label: 'Weekly', value: weekInMilisseconds },
+                  { label: 'Monthly', value: monthInMilisseconds },
+                  { label: 'Yearly', value: yearInMilisseconds },
+                ]}
+              />
+              <Text>How many times?</Text>
               <NumericInput
-                value={repsdiariomodal}
-                onChange={value => setrepsdiariomodal(value)}
+                value={frequencyreps}
+                onChange={value => setfrequencyreps(value)}
                 minValue={1}
-                onLimitReached={(isMax, msg) => console.log(isMax, msg)}
                 rounded />
-
               <TouchableHighlight
                 style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
                 onPress={async () => {
-                  let diariolist = await Storage.addDiarioList(
-                    {
-                      name: textinput,
-                      frequency: repsdiariomodal
-                    })
-                  setrepsdiariomodal(1)
+                  let frequency = Math.round(frequencyperiod / frequencyreps)
+                  let freqlist = await Storage.addToList(
+                    'freqlist',
+                    { name: textinput,
+                      frequency: frequency }
+                  )
+                  setfrequencyreps(1)
+                  setfrequencyperiod(dayInMilisseconds)
                   settextinput('')
-                  setdiariomodalvisible(!diariomodalvisible)
-                  setdiariolist(diariolist)
+                  setfreqmodalvisible(!freqmodalvisible)
+                  setfreqlist(freqlist)
                 }}
               >
-                <Text style={styles.textStyle}>Adicionar</Text>
+                <Text style={styles.textStyle}>Add Task</Text>
               </TouchableHighlight>
 
               <TouchableHighlight
                 style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
                 onPress={() => {
-                  setdiariomodalvisible(!diariomodalvisible);
+                  setfreqmodalvisible(!freqmodalvisible);
                 }}
               >
-                <Text style={styles.textStyle}>Cancelar</Text>
+                <Text style={styles.textStyle}>Cancel</Text>
               </TouchableHighlight>
             </View>
           </View>
@@ -135,25 +166,25 @@ export const TaskPage = () => {
           animationType="fade"
           transparent={true}
           visible={oneshotmodalvisible}
-          onRequestClose={() => {
-            Alert.alert("Modal has been closed.");
-          }}
         >
           <View style={styles.centeredView}>
             <View style={styles.modalView}>
-              <TextInput placeholder="Tarefa..." style={styles.textinput}
+              <TextInput placeholder="Task..." style={styles.textinput}
                 onChangeText={(value) => settextinput(value)} />
 
               <TouchableHighlight
                 style={{ ...styles.openButton, backgroundColor: "#2196F3" }}
                 onPress={async () => {
-                  let oneshotlist = await Storage.addOneshotList({ name: textinput })
+                  let oneshotlist = await Storage.addToList(
+                    'oneshotlist',
+                    { name: textinput }
+                  )
                   settextinput('')
                   setoneshotmodalvisible(!oneshotmodalvisible)
                   setoneshotlist(oneshotlist)
                 }}
               >
-                <Text style={styles.textStyle}>Adicionar</Text>
+                <Text style={styles.textStyle}>Add Task</Text>
               </TouchableHighlight>
 
               <TouchableHighlight
@@ -162,7 +193,7 @@ export const TaskPage = () => {
                   setoneshotmodalvisible(!oneshotmodalvisible);
                 }}
               >
-                <Text style={styles.textStyle}>Cancelar</Text>
+                <Text style={styles.textStyle}>Cancel</Text>
               </TouchableHighlight>
             </View>
           </View>
@@ -171,11 +202,11 @@ export const TaskPage = () => {
 
       <View>
         <View style={styles.button}>
-          <Button title="Diaria"
+          <Button title={"Frequent"}
             onPress={
               () => {
                 setoneshotmodalvisible(false)
-                setdiariomodalvisible(true)
+                setfreqmodalvisible(true)
               }
             }
           />
@@ -184,7 +215,7 @@ export const TaskPage = () => {
           <Button title="One Shot"
             onPress={
               () => {
-                setdiariomodalvisible(false)
+                setfreqmodalvisible(false)
                 setoneshotmodalvisible(true)
               }
             }
@@ -196,24 +227,29 @@ export const TaskPage = () => {
       
         <View style={styles.buttonbox}>
           <TouchableOpacity style={styles.buttonwrapper} onPress={() =>
-            setPage('diaria')}>
-            <View style={[ styles.buttonview, { borderRightWidth: 1 }]}>
-              <Text>Diaria</Text>
+            setPage('freqlist')}>
+            <View style={[ styles.buttonview, { borderRightWidth: 1, borderColor: '#aaa' }]}>
+              <Text>{"Frequent (" + getPendingTasks(freqlist) + "/" + freqlist.length + ")"}</Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity style={styles.buttonwrapper} onPress={() =>
-            setPage('one shot')}>
-            <View style={[ styles.buttonview, { borderLeftWidth: 1 } ]}>
-              <Text>One Shot</Text>
+            setPage('oneshotlist')}>
+            <View style={[styles.buttonview, { borderLeftWidth: 1, borderColor: '#aaa' } ]}>
+              <Text>{"One Shot (" + oneshotlist.length + ")"}</Text>
             </View>
           </TouchableOpacity>
         </View>
       
         <ScrollView style={{height: 430}}>
           {
-            (() => getCurrentList()
-              .map((l, i) => listItem(l))
-            )()
+            getCurrentList().length > 0 ?
+              (() => getCurrentList()
+                .map((l, i) => listItem(l))
+              )()
+            :
+              (<View style={styles.notasks}>
+                <Text> Fill this list with tasks you should do! </Text>
+              </View>)
           }
         </ScrollView>
       </View>
@@ -223,25 +259,43 @@ export const TaskPage = () => {
 };
 
 const styles = StyleSheet.create({
-  deletebutton: {
-    flex: 1,
-    backgroundColor: 'red',
+  item: {
+    textAlign: 'center',
+  },
+  notasks: {
     flexDirection: 'row',
     justifyContent: 'center',
-    paddingVertical: 11,
+    backgroundColor: '#eaeaea',
+    padding: 10,
+    marginTop: 10
+  },
+  markdelete: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#b1b1b1',
-    borderLeftWidth: 0
+    borderLeftWidth: 0,
+    backgroundColor: '#4a4a4a',
+  },
+  markdone: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#b1b1b1',
+    borderRightWidth: 0,
+    backgroundColor: '#4a4a4a'
   },
   itemtext: {
     flex: 5,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#e1e1f4',
     flexDirection: 'row',
     justifyContent: 'center',
     paddingVertical: 11,
     borderWidth: 1,
     borderColor: '#b1b1b1',
-    borderRightWidth: 0
+    paddingHorizontal: 10,
   },
   itemcontainer: {
     flexDirection: 'row',
@@ -259,7 +313,7 @@ const styles = StyleSheet.create({
     padding: 7
   },
   button: {
-    margin: 4
+    margin: 4,
   },
   tasks: {
     padding: 6
@@ -271,10 +325,13 @@ const styles = StyleSheet.create({
   },
   buttonbox: {
     flexDirection: 'row',
-    borderBottomWidth: 2
+    borderBottomWidth: 2,
+    borderWidth: 1,
+    borderColor: '#aaa',
   },
   buttonwrapper: {
     flex: 1,
+    backgroundColor: '#e1e1f4',
   },
   buttonview: {
     padding: 5,

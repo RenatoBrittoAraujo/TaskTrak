@@ -1,20 +1,17 @@
-// import TaskPage from '@/app/views/taskpage'
-
 import React from 'react'
 
-import {
-  Text,
-  View
-} from 'react-native'
-
 import TaskPage from './app/views/taskpage'
+import NotificationService from './app/scripts/notifier'
 
-const App: () => React$Node = () => {
-  return (
-    <>
-      <TaskPage/>
-    </>
-  );
+class App extends React.Component {
+  
+  componentDidMount () {
+    NotificationService.start()
+  }
+
+  render () {
+    return (<TaskPage/>);
+  }
 };
 
 export default App;

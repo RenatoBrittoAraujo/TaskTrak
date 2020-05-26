@@ -14,10 +14,13 @@ constatly about it.
 The design is dead simple (and ugly!), take a look:
 
 Frequent tasks:
+
 ![image](https://i.imgur.com/uhB6RnR.png)
 
 One shot tasks:
+
 ![image](https://i.imgur.com/YIpsjQY.png)
 
 Input interface:
+
 ![image](https://i.imgur.com/7Ljh1pe.png)

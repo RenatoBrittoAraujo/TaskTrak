@@ -27,7 +27,7 @@ Input interface:
 
 #### Running
 
-In on terminal type
+In one terminal type
 ```
 npx react-native start
 ```
@@ -46,3 +46,9 @@ npx react-native run-android --variant=release
 
 If you want to run it on your android device: [follow this](https://reactnative.dev/docs/running-on-device)
 
+#### Testing
+
+
+```
+yarn run test
+```

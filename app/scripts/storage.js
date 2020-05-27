@@ -1,4 +1,4 @@
-import { AsyncStorage } from "react-native"
+import AsyncStorage from 'react-native'
 
 var wiperunning = false
 var keycounter
@@ -9,7 +9,9 @@ var ASfetch = async function (name) {
     return undefined
   }
   let item = await AsyncStorage.getItem(name)
-  return JSON.parse(item)
+  return typeof(item) === 'string' ? 
+    JSON.parse(item) :
+    item
 }
 
 var ASset = async function (name, item) {
@@ -150,13 +152,11 @@ const nameToClass = {
 class Storage {
   async WipeData () {
     wiperunning = true
-    console.log('WipeData called')
     await ASset('keycounter', undefined)
     await ASset('freqlist', undefined)
     await ASset('oneshotlist', undefined)
     keycounter = 0
     wiperunning = false
-    console.log('Data Wiped')
   }
 
   constructor () {

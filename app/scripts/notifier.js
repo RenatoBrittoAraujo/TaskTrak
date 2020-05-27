@@ -5,30 +5,33 @@ import BackgroundFetch from 'react-native-background-fetch'
 class NotificationService {
   
   _name = 'notifyRemainingTasks'
-  
-  async _nofify (taskId) {
 
+  async _getNotifyData () {
     let freqlist = await Storage.fetchList('freqlist')
     let oneshotlist = await Storage.fetchList('oneshotlist')
-    
+
     freqlist = freqlist.filter(el => !el.isDone())
     oneshotlist = oneshotlist.filter(el => !el.isDone())
-    
-    let pending = []
-    for (let item of freqlist) pending.push(item.name)
-    for (let item of oneshotlist) pending.push(item.name)
+
+    let pending = [...freqlist, ...oneshotlist]
 
     const maxNotificationElements = 6
-    pending = pending.filter((el, i) => 
+    pending = pending.filter((el, i) =>
       i <= maxNotificationElements)
     
-    if (pending.length <= 0) {
+    return pending
+  }
+  
+  async _checkNotify (taskId) {
+    let notifyData = await this._getNotifyData()
+    
+    if (notifyData.length <= 0) {
       BackgroundFetch.finish(taskId)
-      return
+      return false
     }
 
     Notifications.postLocalNotification({
-      body: pending.join(', '),
+      body: notifyData.join(', '),
       title: 'There are tasks remaining:',
       sound: 'chime.aiff',
       category: 'Tasks',
@@ -37,6 +40,7 @@ class NotificationService {
     }, 1)
 
     BackgroundFetch.finish(taskId)
+    return notifyData
   }
 
   async _notifyError (taskId) {
@@ -54,7 +58,7 @@ class NotificationService {
       requiresDeviceIdle: false,   
       requiresBatteryNotLow: false,
       requiresStorageNotLow: false 
-    }, this._nofify, this._notifyError)
+    }, this._checkNotify, this._notifyError)
 
     try {
       await BackgroundFetch.scheduleTask({

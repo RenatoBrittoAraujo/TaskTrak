@@ -24,3 +24,25 @@ One shot tasks:
 Input interface:
 
 ![image](https://i.imgur.com/7Ljh1pe.png)
+
+#### Running
+
+In on terminal type
+```
+npx react-native start
+```
+
+In another terminal type:
+
+If you want the dev environment
+```
+npx react-native run-android
+```
+
+If you want production environment
+```
+npx react-native run-android --variant=release
+```
+
+If you want to run it on your android device: [follow this](https://reactnative.dev/docs/running-on-device)
+

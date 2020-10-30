@@ -1,7 +1,7 @@
 # TaskTrak
 Simple task tracker android and IOS app.
 
-I started this out just to learn react native, but this app actually became use to me.
+I started this out just to learn react native, but this app actually became useful to me.
 Who could have guessed that an annoying constant remainder of things that I am yet to
 do would acutally prove itself so useful.
 
